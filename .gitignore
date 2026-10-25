@@ -1,0 +1,44 @@
+# Environment files — never commit. .env.example is the only tracked template.
+.env
+.env.*
+!.env.example
+
+# Secrets, certificates, keys
+secrets/
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+!**/*.example.pem
+
+# Database dumps and backups: these contain customer and financial data and
+# must never enter version control. Keep them in restricted backup storage
+# per INF-04.
+backups/
+*.dump
+*.sql.gz
+*.tar.gz
+!db/init/*.sql
+
+# Generated reports and exports
+exports/
+*.xls
+*.xlsx
+*.csv
+
+# Compose and local override state
+docker-compose.override.yml
+.docker/
+
+# Logs
+logs/
+*.log
+
+# OS and editors
+Thumbs.db
+Desktop.ini
+.DS_Store
+.vscode/
+.idea/
+*.swp

@@ -1,0 +1,129 @@
+# ACE / CSKA CRM — local development stack
+#
+# Scope of this file today: the backing services that do not depend on an
+# unresolved decision. PostgreSQL is fully defined and runnable now.
+#
+# The backend, worker, frontend and proxy services are placeholders at the
+# bottom. They are completed in INF-00 once D-01 fixes the backend language
+# and framework, because their image, command, healthcheck and Dockerfile all
+# follow from that choice. Guessing them now would create configuration that
+# looks authoritative and is wrong.
+#
+# All containers run in UTC. Asia/Almaty is applied by the application for
+# business display, report boundaries and recurrence expansion. Never set a
+# container timezone to compensate for application logic.
+
+name: crm
+
+services:
+  # ---------------------------------------------------------------------------
+  # Development database — authoritative store for everything in this system.
+  # ---------------------------------------------------------------------------
+  postgres:
+    image: postgres:18.1-bookworm
+    container_name: crm-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:?set POSTGRES_DB in .env}
+      POSTGRES_USER: ${POSTGRES_USER:?set POSTGRES_USER in .env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      # ICU collation for correct Russian ordering and case handling of
+      # customer names. The Debian-based image is deliberate: the Alpine
+      # variant uses musl, whose locale support is weaker for Cyrillic.
+      POSTGRES_INITDB_ARGS: >-
+        --encoding=UTF8
+        --locale-provider=icu
+        --icu-locale=${DB_ICU_LOCALE:-ru-KZ}
+        --lc-collate=C.UTF-8
+        --lc-ctype=C.UTF-8
+      TZ: UTC
+      PGTZ: UTC
+    ports:
+      # Bound to localhost only. Do not expose a database port to all
+      # interfaces; the application reaches it over the compose network.
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      # PostgreSQL 18+ images store data in a major-version subdirectory to
+      # support `pg_upgrade --link`. The mount therefore belongs at
+      # /var/lib/postgresql, NOT at /var/lib/postgresql/data — the older path
+      # makes the container refuse to start. See docker-library/postgres#1259.
+      - pgdata:/var/lib/postgresql
+      - ./db/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    # Sizing is provisional pending D-16. These are starting values, not an
+    # approved capacity decision.
+    command:
+      - postgres
+      - -c
+      - max_connections=100
+      - -c
+      - shared_buffers=256MB
+      # Captures statements slower than 500 ms for the INF-03 index review.
+      - -c
+      - log_min_duration_statement=500
+      - -c
+      - log_timezone=UTC
+      - -c
+      - timezone=UTC
+
+  # ---------------------------------------------------------------------------
+  # Test database — separate credentials, ephemeral storage, separate port.
+  # INF-00 requires a test run to be incapable of writing development data.
+  # Start explicitly: docker compose --profile test up -d postgres-test
+  # ---------------------------------------------------------------------------
+  postgres-test:
+    image: postgres:18.1-bookworm
+    container_name: crm-postgres-test
+    profiles: ["test"]
+    restart: "no"
+    environment:
+      POSTGRES_DB: ${TEST_POSTGRES_DB:-crm_test}
+      POSTGRES_USER: ${TEST_POSTGRES_USER:-crm_test}
+      POSTGRES_PASSWORD: ${TEST_POSTGRES_PASSWORD:?set TEST_POSTGRES_PASSWORD in .env}
+      POSTGRES_INITDB_ARGS: >-
+        --encoding=UTF8
+        --locale-provider=icu
+        --icu-locale=${DB_ICU_LOCALE:-ru-KZ}
+        --lc-collate=C.UTF-8
+        --lc-ctype=C.UTF-8
+      TZ: UTC
+      PGTZ: UTC
+    ports:
+      - "127.0.0.1:${TEST_POSTGRES_PORT:-5433}:5432"
+    volumes:
+      # tmpfs: test data never survives a restart, and a test run cannot
+      # accumulate state that makes a later run pass for the wrong reason.
+      - type: tmpfs
+        target: /var/lib/postgresql
+      - ./db/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # ---------------------------------------------------------------------------
+  # PLACEHOLDERS — completed in INF-00 after D-01.
+  #
+  # backend   depends_on postgres (condition: service_healthy); runs the
+  #           migration runner as a separate one-shot command, not as a side
+  #           effect of container start, so an operator can see what ran
+  #           against which database.
+  # worker    same image as backend, different command. Must be provably
+  #           unnecessary for correctness: AC-02 has to pass with this service
+  #           stopped, since hold expiry is evaluated from database time.
+  # frontend  production-shaped profile serves the built assets through the
+  #           proxy. Local development runs `npm run dev` natively against
+  #           this database; see README.
+  # proxy     routing now, TLS termination and secure headers in INF-02 once a
+  #           domain exists under D-16.
+  # ---------------------------------------------------------------------------
+
+volumes:
+  pgdata:
+    name: crm-pgdata
