@@ -1,0 +1,29 @@
+# Office temporary/lock files
+~$*.doc*
+~$*.xls*
+~$*.ppt*
+
+# OS
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+.DS_Store
+
+# Editors
+.vscode/
+.idea/
+*.swp
+
+# Extracted document contents — never commit
+/word/
+/_rels/
+/docProps/
+[Content_Types].xml
+
+# Never commit credentials or exported business data
+*.env
+.env
+secrets*
+credentials*
+*-export.xlsx
+*-export.csv
