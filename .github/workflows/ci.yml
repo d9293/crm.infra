@@ -1,0 +1,94 @@
+# INF-01 — infrastructure verification.
+#
+# Two things are worth checking automatically: that the Compose file is valid
+# and that no secret has been committed. Both are failures that are cheap to
+# catch here and expensive to discover later — a leaked credential has to be
+# rotated everywhere, and a broken Compose file blocks every developer.
+#
+# Later additions under INF-04 and INF-06: a scheduled job proving the backup
+# and restore procedure still works against a real database.
+
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  compose:
+    name: Compose and environment template
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Interpolation is validated too, so a typo in a ${VAR} reference fails
+      # here rather than on a developer's first run. The values are throwaway:
+      # this job proves the file parses, not that these are real credentials.
+      - name: Validate compose configuration
+        run: |
+          set -euo pipefail
+          cat > .env <<'ENVFILE'
+          POSTGRES_DB=ci_validation
+          POSTGRES_USER=ci_validation
+          POSTGRES_PASSWORD=ci_validation_not_a_real_secret
+          TEST_POSTGRES_PASSWORD=ci_validation_test_differs
+          ENVFILE
+          docker compose config --quiet
+          docker compose --profile test config --quiet
+          rm -f .env
+          echo "Compose configuration is valid."
+
+      # .env.example documents variables; it must never carry a real value.
+      # Every REQUIRED entry is expected to be present and empty.
+      - name: Assert .env.example contains no filled-in secrets
+        run: |
+          set -euo pipefail
+          failed=0
+          while IFS= read -r line; do
+            key="${line%%=*}"
+            value="${line#*=}"
+            case "$key" in
+              *PASSWORD|*SECRET*|*TOKEN|*API_KEY)
+                if [ -n "$value" ]; then
+                  echo "::error file=.env.example::$key has a value in .env.example; it must be empty."
+                  failed=1
+                fi
+                ;;
+            esac
+          done < <(grep -E '^[A-Z0-9_]+=' .env.example)
+
+          if [ "$failed" -ne 0 ]; then exit 1; fi
+          echo "No filled-in secrets in .env.example."
+
+      # A real .env must never be tracked. .gitignore covers it, but a
+      # `git add -f` would bypass that silently.
+      - name: Assert no environment file or key material is tracked
+        run: |
+          set -euo pipefail
+          if git ls-files | grep -E '(^|/)\.env$|(^|/)\.env\.(local|production|development)$|\.(pem|key|p12|pfx)$'; then
+            echo "::error::An environment file or key is tracked in git."
+            exit 1
+          fi
+          echo "No environment files or key material tracked."
+
+      # db/init runs once on an empty data directory and holds extensions
+      # only. A schema created there cannot be versioned or rolled back, and
+      # would not be reproduced by the AC-14 restore drill.
+      - name: Assert db/init contains no schema
+        run: |
+          set -euo pipefail
+          if grep -nEi '^[[:space:]]*(CREATE|ALTER)[[:space:]]+(TABLE|INDEX|TYPE|VIEW|SCHEMA)' db/init/*.sql; then
+            echo "::error::Schema found in db/init. Schema belongs in the backend migration history."
+            exit 1
+          fi
+          echo "db/init contains no schema."
