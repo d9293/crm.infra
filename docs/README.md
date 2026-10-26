@@ -1,8 +1,12 @@
-# ACE and CSKA CRM — specification repository
+# ACE and CSKA CRM — specification
 
-Business and engineering specification for the tennis-centre CRM. This repository holds documents only; application code lives in `crm.backend`, `crm.frontend` and `crm.infra`.
+Business and engineering specification for the tennis-centre CRM. Documents only; application code lives in `crm.backend`, `crm.frontend` and the parent of this directory.
 
 Version 0.1 · 25 October 2026
+
+> **Location note.** These documents were originally a standalone repository and now live under `crm.infra/docs/` so they have a remote and a backup. They were brought across with `git subtree`, so their original commit history is preserved in this repository's log.
+>
+> This is a pragmatic home, not the intended one. If a dedicated `crm.docs` repository is created later, extract this directory with `git subtree split --prefix=docs` to move it out with its history intact. **Edit the copy here** — it is the single source of truth; do not keep a second copy elsewhere, because two sets of specifications will drift.
 
 ## Reading order
 

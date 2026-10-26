@@ -6,12 +6,14 @@ Docker Compose, routing and TLS configuration, environment templates, migration 
 
 ## Specification
 
+The whole specification set lives in [`docs/`](docs/) in this repository — it has no separate repository of its own. Start at [`docs/README.md`](docs/README.md) for the reading order, or [`docs/decision-briefing.md`](docs/decision-briefing.md) for the decisions currently blocking work.
+
 | Document | Use |
 |---|---|
-| `development/infra.md` | Ticket backlog INF-00–INF-08 |
-| `development/README.md` §11 | Infrastructure and release responsibilities |
-| `development/README.md` §10 | Acceptance tests AC-01–15, including AC-14 recovery |
-| `development/decisions.md` | Open decisions — D-16 gates five of the nine infrastructure tickets |
+| [`docs/development/infra.md`](docs/development/infra.md) | Ticket backlog INF-00–INF-08 |
+| [`docs/development/README.md`](docs/development/README.md) §11 | Infrastructure and release responsibilities |
+| [`docs/development/README.md`](docs/development/README.md) §10 | Acceptance tests AC-01–15, including AC-14 recovery |
+| [`docs/development/decisions.md`](docs/development/decisions.md) | Open decisions — D-16 gates five of the nine infrastructure tickets |
 
 ## Status
 
