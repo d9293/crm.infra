@@ -15,6 +15,7 @@ Start at the top. Later documents assume the earlier ones.
 | 3 | [`business-demo-review.md`](business-demo-review.md) | Authenticated prototype review, 24 October 2026 |
 | 4 | [`development/README.md`](development/README.md) | **Master specification** — business rules, pages, sprints, contracts, acceptance |
 | 5 | [`development/decisions.md`](development/decisions.md) | Open decisions D-01–D-18 and their sprint gates |
+| 5a | [`decision-briefing.md`](decision-briefing.md) | **The five decisions blocking the start of work**, with recommendations — for the owner conversation |
 | 6 | [`development/ui-ux.md`](development/ui-ux.md) | Visual and interaction contract |
 | 7 | [`development/backend.md`](development/backend.md) | Backend backlog BE-00–BE-21 |
 | 8 | [`development/frontend.md`](development/frontend.md) | Frontend backlog FE-00–FE-23 |
@@ -35,15 +36,19 @@ Full statement in [`development/README.md` §1](development/README.md).
 
 Confirmed and ready for refinement: both locations, customer accounts, Power User authority, the five-minute hold and employee decision, unpaid confirmation, administrator-approved customer cancellation at least two hours before start, no automatic refund on cancellation.
 
-Blocking the start of S0:
+Blocking the start of work — see [`decision-briefing.md`](decision-briefing.md) for the questions as they should be asked, with recommendations:
 
 | Decision | Question |
 |---|---|
+| D-18 | Fresh implementation versus upgrade of the existing site — largest unknown |
 | D-01 | Backend language: Python or Go |
-| D-18 | Fresh implementation versus upgrade of the existing site |
-| D-16 | Volumes, performance targets, backup objectives, hosting, monitoring ownership — gates five of nine infrastructure tickets |
+| D-16 | Volumes, recovery targets, hosting, support ownership — gates five of nine infrastructure tickets |
+| D-02 | How customers receive accounts |
+| D-04 | Role defaults — what each role may actually do |
 
 A feature whose decisions are unresolved is not implementation-ready regardless of how completely its ticket is written.
+
+Already built and not waiting on any of the above: the specification set, the S1/S3/S4 API contract, the frontend foundation, and a working prototype of the booking and cancellation journeys.
 
 ## Conventions
 
