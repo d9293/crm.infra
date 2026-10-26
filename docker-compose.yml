@@ -108,15 +108,80 @@ services:
       retries: 10
 
   # ---------------------------------------------------------------------------
-  # PLACEHOLDERS — completed in INF-00 after D-01.
+  # Backend API — Python/FastAPI (D-01 resolved 26 October 2026).
+  # Built from the sibling crm.backend repository.
+  # ---------------------------------------------------------------------------
+  backend:
+    build:
+      context: ../crm.backend
+      dockerfile: Dockerfile
+    container_name: crm-backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        # Waits for the healthcheck, not merely for the container to exist.
+        # Starting the API against a database still initialising produces a
+        # confusing crash loop rather than a clear dependency failure.
+        condition: service_healthy
+    environment:
+      ENVIRONMENT: ${ENVIRONMENT:-development}
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: ${POSTGRES_DB:?set POSTGRES_DB in .env}
+      POSTGRES_USER: ${POSTGRES_USER:?set POSTGRES_USER in .env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      APP_SECRET_KEY: ${APP_SECRET_KEY:?set APP_SECRET_KEY in .env}
+      SESSION_COOKIE_SECURE: ${SESSION_COOKIE_SECURE:-false}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:5173}
+      BUSINESS_TIMEZONE: ${BUSINESS_TIMEZONE:-Asia/Almaty}
+      TZ: UTC
+    ports:
+      - "127.0.0.1:${BACKEND_PORT:-8000}:8000"
+    healthcheck:
+      # Liveness only — deliberately not /ready. A database blip must not make
+      # the orchestrator restart a perfectly healthy API process.
+      test: ["CMD-SHELL", "python -c \"import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3).status==200 else 1)\""]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+  # ---------------------------------------------------------------------------
+  # Migration runner — one-shot, explicit, never automatic.
   #
-  # backend   depends_on postgres (condition: service_healthy); runs the
-  #           migration runner as a separate one-shot command, not as a side
-  #           effect of container start, so an operator can see what ran
-  #           against which database.
+  #   docker compose run --rm migrate
+  #
+  # INF-00 requires an operator to be able to see what ran against which
+  # database. Running migrations on container start would also race three
+  # migration runs against one database during a rolling restart.
+  # ---------------------------------------------------------------------------
+  migrate:
+    build:
+      context: ../crm.backend
+      dockerfile: Dockerfile
+    container_name: crm-migrate
+    profiles: ["tools"]
+    restart: "no"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: ${POSTGRES_DB:?set POSTGRES_DB in .env}
+      POSTGRES_USER: ${POSTGRES_USER:?set POSTGRES_USER in .env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      APP_SECRET_KEY: ${APP_SECRET_KEY:?set APP_SECRET_KEY in .env}
+      TZ: UTC
+    command: ["alembic", "upgrade", "head"]
+
+  # ---------------------------------------------------------------------------
+  # STILL PLACEHOLDERS
+  #
   # worker    same image as backend, different command. Must be provably
   #           unnecessary for correctness: AC-02 has to pass with this service
   #           stopped, since hold expiry is evaluated from database time.
+  #           Arrives with BE-07 in S3.
   # frontend  production-shaped profile serves the built assets through the
   #           proxy. Local development runs `npm run dev` natively against
   #           this database; see README.

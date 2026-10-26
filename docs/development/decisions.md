@@ -6,9 +6,16 @@ Confirmed: both ACE and CSKA; customer accounts; payroll following demo; Power U
 
 The items below are not approved rules. Resolve only the decisions needed for the next sprint, rather than asking the owner to settle everything at once. Suggested owners are business owner/Power User plus product analyst, with finance or engineering input as appropriate.
 
+## Resolved
+
+| ID | Decision | Resolved | Notes |
+|---|---|---|---|
+| D-01 | **Python.** FastAPI, SQLAlchemy 2.x, Alembic, psycopg 3, PostgreSQL. Session as a secure `HttpOnly` cookie with CSRF on state-changing requests. | 26 October 2026 | Rationale in `crm.backend/README.md`. The PostgreSQL locking and exclusion-constraint strategy in BE-06 is language-neutral and unchanged by this choice. Supported deployment environment still follows D-16. |
+
+## Open
+
 | ID | Decision needed | Blocks |
 |---|---|---|
-| D-01 | Python or Go; framework, session strategy and supported deployment environment. Engineering recommendation to be reviewed, not inferred from demo. | S0 backend scaffold |
 | D-02 | How customers receive accounts: employee invitation, self-registration or both; verification and recovery; linking an existing record without takeover; parent/child account management. | S1 production customer onboarding |
 | D-03 | Customer pages beyond reservation scope: memberships, balances, receipts, profile changes, family records; what coaches may see about free courts. | Extra customer/coach pages |
 | D-04 | Exact role defaults and delegated permissions: operator confirmation, administrator financial visibility, coach customer creation/cancellation/attendance, Power User delegation. | Each affected permission; baseline S1 |
